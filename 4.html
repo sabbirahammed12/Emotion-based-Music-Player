@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Music Player</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      color: white;
+      text-align: center;
+      padding: 50px;
+      position: relative;
+      background-color: #222;
+      transition: background-color 0.1s linear;
+    }
+
+    #player {
+      padding: 20px;
+      border-radius: 10px;
+      display: inline-block;
+      background: rgba(0,0,0,0.3);
+    }
+
+    img {
+      max-width: 200px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    /* Slide toggle */
+    .switch {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      border-radius: 34px;
+      transition: 0.4s;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+
+    .switch input:checked + .slider {
+      background-color: #4CAF50;
+    }
+
+    .switch input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+
+    /* Save Color Theme button */
+    #save-color-btn, #liked-themes-btn {
+      position: absolute;
+      left: 20px;
+      width: 60px;
+      height: 34px;
+      border-radius: 34px;
+      border: none;
+      background-color: #888;
+      cursor: pointer;
+      color: white;
+      font-size: 14px;
+      transition: background-color 0.3s ease;
+    }
+
+    #save-color-btn.active {
+      background-color: #4CAF50;
+    }
+
+    #save-color-btn { top: 70px; }
+    #liked-themes-btn { top: 120px; }
+
+    /* Liked themes popup */
+    #theme-list {
+      display: none;
+      position: absolute;
+      top: 160px;
+      left: 20px;
+      background: rgba(0,0,0,0.8);
+      padding: 10px;
+      border-radius: 10px;
+      width: 200px;
+      max-height: 200px;
+      overflow-y: auto;
+      text-align: left;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    .theme-item {
+      padding: 6px;
+      margin: 4px 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      color: white;
+      transition: background 0.2s ease;
+      display: flex;
+      align-items: center;
+    }
+
+    .theme-item:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    /* Next/Prev buttons */
+    #prev-btn, #next-btn {
+      width: 140px;
+      height: 40px;
+      border-radius: 25px;
+      border: none;
+      background-color: #555;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      margin: 5px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      transition: background-color 0.3s ease;
+    }
+
+    #prev-btn:hover, #next-btn:hover {
+      background-color: #777;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Slide toggle -->
+  <label class="switch">
+    <input type="checkbox" id="color-toggle">
+    <span class="slider"></span>
+  </label>
+
+  <!-- Save Theme -->
+  <button id="save-color-btn" title="Save current color">💾</button>
+  
+  <!-- Liked Themes -->
+  <button id="liked-themes-btn" title="Show saved themes">❤️</button>
+  
+  <!-- Liked Themes List -->
+  <div id="theme-list"></div>
+
+  <div id="player">
+    <img id="thumbnail" src="" alt="Thumbnail">
+    <h2 id="song-title">Song Title</h2>
+    <p id="song-artist">Artist Name</p>
+    <div>
+      <button id="prev-btn">Previous</button>
+      <button id="next-btn">Next</button>
+    </div>
+  </div>
+
+  <script>
+    const toggleInput = document.getElementById('color-toggle');
+    const saveColorBtn = document.getElementById('save-color-btn');
+    const likedThemesBtn = document.getElementById('liked-themes-btn');
+    const themeList = document.getElementById('theme-list');
+    const thumbnailImg = document.getElementById('thumbnail');
+    const defaultBackground = "#222";
+
+    let colorChangeEnabled = false;
+    let savedTheme = null;
+    let currentColors = { color1: null, color2: null };
+    let currentSong = null;
+
+    async function applyColor(imgUrl) {
+      try {
+        const response = await fetch('http://localhost:5001/thumbnail-color', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ img_url: imgUrl })
+        });
+        const data = await response.json();
+        if (data.color1 && data.color2 && colorChangeEnabled) {
+          if (!savedTheme) {
+            currentColors.color1 = data.color1;
+            currentColors.color2 = data.color2;
+            document.body.style.background = `linear-gradient(to right, ${data.color1}, ${data.color2})`;
+          }
+        }
+      } catch (error) {
+        console.error("Failed to apply color:", error);
+      }
+    }
+
+    toggleInput.addEventListener('change', () => {
+      colorChangeEnabled = toggleInput.checked;
+      if (!colorChangeEnabled && !savedTheme) {
+        document.body.style.background = defaultBackground;
+      } else if (colorChangeEnabled && thumbnailImg.src && !savedTheme) {
+        applyColor(thumbnailImg.src);
+      }
+    });
+
+    saveColorBtn.addEventListener('click', async () => {
+      if (!savedTheme) {
+        if (currentColors.color1 && currentColors.color2) {
+          const gradientStr = `${currentColors.color1},${currentColors.color2}`;
+          savedTheme = gradientStr;
+          saveColorBtn.classList.add('active');
+          try {
+            await fetch('http://localhost:5001/save-theme', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ color: gradientStr, user_id: 1 })
+            });
+            console.log("Theme saved to database:", gradientStr);
+          } catch (e) {
+            console.error("Failed to save theme:", e);
+          }
+        }
+      } else {
+        savedTheme = null;
+        saveColorBtn.classList.remove('active');
+        if (colorChangeEnabled && thumbnailImg.src) {
+          applyColor(thumbnailImg.src);
+        } else {
+          document.body.style.background = defaultBackground;
+        }
+      }
+    });
+
+    likedThemesBtn.addEventListener('click', async () => {
+      if (themeList.style.display === "block") {
+        themeList.style.display = "none";
+        return;
+      }
+
+      try {
+        const res = await fetch('http://localhost:5001/get-themes?user_id=1');
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const themes = await res.json();
+
+        themeList.innerHTML = "";
+        themes.forEach(theme => {
+          const item = document.createElement("div");
+          item.className = "theme-item";
+
+          const colorSwatch = document.createElement("div");
+          colorSwatch.style.width = "20px";
+          colorSwatch.style.height = "20px";
+          colorSwatch.style.display = "inline-block";
+          colorSwatch.style.marginRight = "10px";
+
+          const text = document.createElement("span");
+
+          const colorsArr = theme.color.split(',');
+          if (colorsArr.length === 2) {
+            colorSwatch.style.background = `linear-gradient(to right, ${colorsArr[0]}, ${colorsArr[1]})`;
+            text.textContent = `${colorsArr[0]} to ${colorsArr[1]}`;
+          } else {
+            colorSwatch.style.backgroundColor = theme.color;
+            text.textContent = theme.color;
+          }
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.textContent = "X";
+          deleteBtn.style.float = "right";
+          deleteBtn.style.background = "none";
+          deleteBtn.style.border = "none";
+          deleteBtn.style.color = "white";
+          deleteBtn.style.cursor = "pointer";
+
+          deleteBtn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            try {
+              const delRes = await fetch(`http://localhost:5001/delete-theme/${theme.id}?user_id=1`, {
+                method: 'DELETE'
+              });
+              if (delRes.ok) {
+                item.remove();
+              }
+            } catch (e) {
+              console.error("Failed to delete theme:", e);
+            }
+          });
+
+          item.appendChild(colorSwatch);
+          item.appendChild(text);
+          item.appendChild(deleteBtn);
+
+          item.addEventListener("click", (e) => {
+            if (e.target !== deleteBtn) {
+              const colorsArr = theme.color.split(',');
+              if (colorsArr.length === 2) {
+                document.body.style.background = `linear-gradient(to right, ${colorsArr[0]}, ${colorsArr[1]})`;
+              } else {
+                document.body.style.background = theme.color;
+              }
+              savedTheme = theme.color;
+              saveColorBtn.classList.add('active');
+              themeList.style.display = "none";
+            }
+          });
+
+          themeList.appendChild(item);
+        });
+        themeList.style.display = "block";
+      } catch (err) {
+        console.error("Error loading themes:", err);
+        alert("Failed to load themes. Make sure the server is running and the URL is correct.");
+      }
+    });
+
+    async function loadSong(songData) {
+      if (!songData) return;
+      currentSong = songData;
+      thumbnailImg.src = songData.thumbnail;
+      document.getElementById('song-title').textContent = songData.title;
+      document.getElementById('song-artist').textContent = songData.artist;
+
+      if (colorChangeEnabled && !savedTheme) {
+        applyColor(songData.thumbnail);
+      }
+    }
+
+    async function fetchSong(url = 'http://localhost:5001/play-song') {
+      try {
+        const res = await fetch(url);
+        const songData = await res.json();
+        loadSong(songData);
+      } catch (error) {
+        console.error("Error fetching song:", error);
+      }
+    }
+
+    function playNextSong() { fetchSong(); }
+    function playPrevSong() { fetchSong(); }
+
+    document.getElementById('next-btn').addEventListener('click', playNextSong);
+    document.getElementById('prev-btn').addEventListener('click', playPrevSong);
+
+    // Load first song
+    fetchSong();
+  </script>
+</body>
+</html>
