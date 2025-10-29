@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emotion-Based Music Player</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { 
+    height: 100%; 
+    width: 100%; 
+    display: flex; 
+    font-family: 'Poppins', sans-serif; 
+    background: linear-gradient(135deg, #f5f7fa, #ffd1dc); 
+    color: #333; 
+    transition: background 0.3s; 
+  }
+
+  /* Bars */
+  .bar { height: 100%; transition: all 0.3s ease; display: flex; flex-direction: column; }
+  .bar-left { 
+    flex: 0.2; 
+    background: linear-gradient(135deg, #ffffff, #ffe6f0); 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    padding-top: 20px; 
+    position: relative;
+    gap: 15px;
+  }
+  .bar-middle { 
+    flex: 1.75; 
+    background: linear-gradient(135deg, #ffe6f0, #f5f7fa); 
+    transition: flex 0.3s ease, margin-left 0.3s ease; 
+    position: relative; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    overflow: hidden;
+  }
+  .bar-right { 
+    flex: 1; 
+    background: linear-gradient(135deg, #ffffff, #ffd1dc); 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+    padding: 10px; 
+  }
+
+  /* Toggle Sidebar Button */
+  .toggle-sidebar-button {
+    width: 90%;
+    height: 40px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, #ff99cc, #ff4d94);
+    cursor: pointer;
+    font-weight: bold;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s;
+    margin-bottom: 15px;
+  }
+  .toggle-sidebar-button:hover { 
+    background: linear-gradient(135deg, #ff80b3, #ff3385); 
+  }
+
+  /* Left placeholders */
+  .left-placeholder { 
+    width: 90%; 
+    height: 150px; 
+    border: 2px dashed #ff99cc; 
+    border-radius: 10px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    color: #ff4d94; 
+    font-size: 14px; 
+    text-align: center; 
+    padding: 10px; 
+    cursor: pointer; 
+    background: linear-gradient(135deg, #ffffff, #fff0f5); 
+    transition: 0.3s; 
+  }
+  .left-placeholder:hover { 
+    border-color: #ff3385; 
+    color: #ff3385; 
+    background: linear-gradient(135deg, #fff0f5, #ffe6f0); 
+  }
+
+  /* Login button inside left bar */
+  .left-login-button {
+    position: absolute; 
+    bottom: 20px;
+    left: 10px;
+    width: calc(100% - 20px);
+    height: 40px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, #ff99cc, #ff4d94);
+    cursor: pointer;
+    font-weight: bold;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: width 0.3s, background 0.3s;
+  }
+  .left-login-button:hover { 
+    background: linear-gradient(135deg, #ff80b3, #ff3385); 
+  }
+  .left-login-button.logged-in { 
+    background: linear-gradient(135deg, #4CAF50, #45a049); 
+  }
+  .left-login-button.logged-out { 
+    background: linear-gradient(135deg, #f44336, #d32f2f); 
+  }
+
+  /* Middle bar top row for search and camera */
+  .middle-top-row {
+    width: 90%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 20px;
+  }
+
+  /* Search bar */
+  .middle-search-bar {
+    flex: 1;
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, #ffffff, #fff0f5);
+    color: #333;
+    font-size: 16px;
+    margin-right: 10px;
+  }
+  .middle-search-bar::placeholder { color: #ff99cc; }
+
+  /* Camera button */
+  .camera-button {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #ff99cc, #ff4d94);
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.3s;
+    color: #fff;
+  }
+  .camera-button:hover { 
+    background: linear-gradient(135deg, #ff80b3, #ff3385); 
+  }
+
+  /* Recently Played */
+  .recently-played {
+    margin-top: 20px;
+    width: 90%;
+    padding: 10px;
+    background: linear-gradient(135deg, #ffffff, #fff0f5);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+  }
+  .recently-played h3 { 
+    font-size: 16px; 
+    margin-bottom: 10px; 
+    color: #ff4d94; 
+  }
+  .recent-list-horizontal {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+  }
+  .recent-list-horizontal::-webkit-scrollbar { height: 8px; }
+  .recent-list-horizontal::-webkit-scrollbar-thumb { 
+    background: linear-gradient(135deg, #ff99cc, #ff4d94); 
+    border-radius: 4px; 
+  }
+  .recent-item-horizontal {
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: transform 0.3s;
+  }
+  .recent-item-horizontal:hover { transform: scale(1.05); }
+  .recent-item-horizontal img {
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 2px solid #ff99cc;
+    transition: 0.3s;
+  }
+  .recent-item-horizontal span { 
+    font-size: 14px; 
+    color: #ff4d94; 
+  }
+
+  /* Right player */
+  .right-top { 
+    flex: 1; 
+    border-radius: 10px; 
+    background: linear-gradient(135deg, #ffffff, #fff0f5); 
+  }
+  .right-bottom { 
+    flex: 1.8; 
+    border-radius: 10px; 
+    background: linear-gradient(135deg, #ffffff, #fff0f5); 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    padding: 15px; 
+    gap: 15px; 
+  }
+
+  .player-thumbnail { 
+    width: 250px; 
+    height: 330px; 
+    border-radius: 10px; 
+    object-fit: cover; 
+    border: 2px solid #ff99cc; 
+    transition: transform 0.3s; 
+  }
+  .player-thumbnail:hover { transform: scale(1.02); }
+  .player-controls { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    margin-top: 10px; 
+  }
+  .player-controls button { 
+    width: 45px; 
+    height: 45px; 
+    border-radius: 50%; 
+    border: none; 
+    background: linear-gradient(135deg, #ff99cc, #ff4d94); 
+    cursor: pointer; 
+    font-size: 18px; 
+    color: #fff; 
+    transition: all 0.3s ease; 
+  }
+  .player-controls button:hover { 
+    background: linear-gradient(135deg, #ff80b3, #ff3385); 
+    transform: scale(1.1); 
+  }
+  .player-controls button:disabled { 
+    background: linear-gradient(135deg, #ffccd5, #ff99cc); 
+    cursor: not-allowed; 
+    opacity: 0.5; 
+    transform: none; 
+  }
+  .player-controls button:disabled:hover { 
+    background: linear-gradient(135deg, #ffccd5, #ff99cc); 
+    transform: none; 
+  }
+  .like-button { font-size: 20px; }
+  .like-button.liked { color: #ff3385; }
+
+  .progress-container { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    width: 90%; 
+  }
+  #progressBar { 
+    width: 100%; 
+    -webkit-appearance: none; 
+    height: 6px; 
+    background: linear-gradient(135deg, #ff99cc, #ff4d94); 
+    border-radius: 3px; 
+    transition: background 0.3s;
+  }
+  #progressBar:hover { 
+    background: linear-gradient(135deg, #ff80b3, #ff3385); 
+  }
+  #progressBar::-webkit-slider-thumb { 
+    -webkit-appearance: none; 
+    height: 14px; 
+    width: 14px; 
+    background: #ff4d94; 
+    border-radius: 50%; 
+    transition: background 0.3s;
+  }
+  #progressBar::-webkit-slider-thumb:hover { background: #ff3385; }
+  #progressBar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .time-display { 
+    font-size: 0.8rem; 
+    margin-top: 3px; 
+    color: #ff4d94; 
+    display: flex; 
+    justify-content: space-between; 
+    width: 100%; 
+  }
+
+  .volume-controls { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    margin-top: 10px; 
+    width: 90%; 
+  }
+  .volume-controls input[type="range"] { width: 70%; }
+  .volume-controls button { 
+    width: 30px; 
+    height: 30px; 
+    border-radius: 50%; 
+    border: none; 
+    background: linear-gradient(135deg, #ff99cc, #ff4d94); 
+    color: #fff; 
+    transition: all 0.3s;
+  }
+  .volume-controls button:hover { 
+    background: linear-gradient(135deg, #ff80b3, #ff3385); 
+    transform: scale(1.1); 
+  }
+  .volume-controls button:disabled { 
+    background: linear-gradient(135deg, #ffccd5, #ff99cc); 
+    cursor: not-allowed; 
+    opacity: 0.5; 
+    transform: none; 
+  }
+  .volume-controls button:disabled:hover { 
+    background: linear-gradient(135deg, #ffccd5, #ff99cc); 
+    transform: none; 
+  }
+
+  /* Emotion indicator */
+  .emotion-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    border-radius: 15px;
+    background: linear-gradient(135deg, #ff99cc, #ff4d94);
+    font-size: 12px;
+    color: #fff;
+    transition: all 0.3s ease;
+  }
+  .emotion-indicator:hover { 
+    background: linear-gradient(135deg, #ff80b3, #ff3385); 
+  }
+
+  /* Loading spinner */
+  .loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 153, 204, 0.3);
+    border-radius: 50%;
+    border-top-color: #ff4d94;
+    animation: spin 1s ease-in-out infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Playlist Overlay */
+  .playlist-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #ffffff, #fff0f5); 
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.5s ease;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+  }
+  
+  .playlist-overlay.active {
+    transform: translateY(0);
+  }
+  
+  .playlist-overlay.closing {
+    transform: translateY(100%);
+  }
+  
+  .playlist-overlay-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 90%;
+    margin-bottom: 20px;
+  }
+  
+  .playlist-overlay h2 {
+    font-size: 24px;
+    margin: 0;
+    color: #ff4d94;
+  }
+  
+  .close-playlist {
+    background: linear-gradient(135deg, #ff99cc, #ff4d94);
+    border: none;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.3s;
+  }
+  
+  .close-playlist:hover {
+    background: linear-gradient(135deg, #ff80b3, #ff3385);
+    transform: scale(1.1);
+  }
+  
+  .playlist-search-bar {
+    width: 90%;
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, #ffffff, #fff0f5);
+    color: #333;
+    font-size: 16px;
+    margin-bottom: 20px;
+  }
+  
+  .playlist-search-bar::placeholder { color: #ff99cc; }
+  
+  .playlist-overlay-content {
+    width: 90%;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+  }
+  
+  .playlist-overlay-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    padding: 10px;
+    border-radius: 8px;
+  }
+  
+  .playlist-overlay-item:hover {
+    background: linear-gradient(135deg, #fff0f5, #ffe6f0);
+    transform: scale(1.05);
+  }
+  
+  .playlist-overlay-item img {
+    width: 120px;
+    height: 120px;
+    border-radius: 8px;
+    object-fit: cover;
+    margin-bottom: 8px;
+  }
+  
+  .playlist-overlay-item span {
+    font-size: 14px;
+    text-align: center;
+    color: #ff4d94;
+  }
+
+  /* --- Responsive: small screen fix --- */
+  @media (max-width: 768px) {
+    .bar-left {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 10;
+      width: 60px; /* collapsed */
+    }
+    .bar-left.expanded { width: 220px; }
+    .bar-middle { flex: 1; }
+    
+    .playlist-overlay-content {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+  }
+</style>
+</head>
+<body>
+  <!-- Left Bar -->
+  <div class="bar bar-left">
+    <button class="toggle-sidebar-button" id="toggleSidebarButton">&lt; &gt;</button>
+    <div class="left-placeholder" id="playlistButton1">Current Playlist</div>
+    <div class="left-placeholder" id="playlistButton2">Liked Songs</div>
+    <button class="left-login-button logged-out" id="loginButton">Login</button>
+  </div>
+
+  <!-- Middle Bar -->
+  <div class="bar bar-middle">
+    <div class="middle-top-row">
+      <input type="text" placeholder="Search..." class="middle-search-bar" id="searchInput">
+      <button class="camera-button" id="emotionButton">😊</button>
+    </div>
+    <div class="recently-played">
+      <h3>Recently Played</h3>
+      <div class="recent-list-horizontal" id="recentlyPlayedList">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+    <div class="recently-played" id="currentPlaylistSection" style="margin-top: 20px;">
+      <h3>Current Playlist</h3>
+      <div class="recent-list-horizontal" id="currentPlaylist">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+    
+    <!-- Playlist Overlay -->
+    <div class="playlist-overlay" id="playlistOverlay">
+      <div class="playlist-overlay-header">
+        <h2 id="overlayTitle">Current Playlist</h2>
+        <button class="close-playlist" id="closePlaylist">✕</button>
+      </div>
+      <input type="text" placeholder="Search in playlist..." class="playlist-search-bar" id="playlistSearch">
+      <div class="playlist-overlay-content" id="overlayContent">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Bar -->
+  <div class="bar bar-right">
+    <div class="emotion-indicator" id="emotionIndicator">Emotion: Loading...</div>
+    
+    <div class="right-bottom">
+      <img src="default_album.png" class="player-thumbnail" id="playerThumbnail">
+      <div class="player-controls">
+        <button id="prevBtn" disabled>⏮</button>
+        <button id="playBtn" disabled>▶</button>
+        <button id="pauseBtn" disabled>⏸</button>
+        <button id="nextBtn" disabled>⏭</button>
+        <button class="like-button" id="likeBtn" disabled>❤</button>
+      </div>
+      <div class="progress-container">
+        <input type="range" id="progressBar" min="0" max="100" value="0" disabled>
+        <div class="time-display"><span id="currentTime">0:00</span><span id="totalTime">0:00</span></div>
+      </div>
+      <div class="volume-controls">
+        <button id="volDown" disabled>-</button>
+        <input type="range" id="volumeSlider" min="0" max="100" value="70" disabled>
+        <button id="volUp" disabled>+</button>
+      </div>
+      <audio id="audioPlayer"></audio>
+    </div>
+  </div>
+
+<script>
+  // Backend API URL
+  const API_BASE = 'http://localhost:5001';
+  
+  // Global state
+  let currentEmotion = 'sad';
+  let currentSong = null;
+  let currentPlaylist = [];
+  let likedSongs = [];
+  let recentlyPlayed = [];
+  let isExpanded = false;
+  let isPlaylistOverlayOpen = false;
+  let lastPlaylistClickTime = 0;
+  let currentOverlayType = '';
+  let isLoggedIn = false;
+
+  // DOM Elements
+  const barLeft = document.querySelector('.bar-left');
+  const barMiddle = document.querySelector('.bar-middle');
+  const audio = document.getElementById('audioPlayer');
+  const playBtn = document.getElementById('playBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const likeBtn = document.getElementById('likeBtn');
+  const volumeSlider = document.getElementById('volumeSlider');
+  const progressBar = document.getElementById('progressBar');
+  const currentTimeEl = document.getElementById('currentTime');
+  const totalTimeEl = document.getElementById('totalTime');
+  const playerThumbnail = document.getElementById('playerThumbnail');
+  const volDown = document.getElementById('volDown');
+  const volUp = document.getElementById('volUp');
+  const emotionIndicator = document.getElementById('emotionIndicator');
+  const emotionButton = document.getElementById('emotionButton');
+  const recentlyPlayedList = document.getElementById('recentlyPlayedList');
+  const currentPlaylistSection = document.getElementById('currentPlaylist');
+  const searchInput = document.getElementById('searchInput');
+  const playlistOverlay = document.getElementById('playlistOverlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayContent = document.getElementById('overlayContent');
+  const closePlaylist = document.getElementById('closePlaylist');
+  const playlistSearch = document.getElementById('playlistSearch');
+  const loginButton = document.getElementById('loginButton');
+  const toggleSidebarButton = document.getElementById('toggleSidebarButton');
+
+  // Check server availability
+  async function checkServerAvailability() {
+    try {
+      const response = await fetch(`${API_BASE}/current-emotion`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (response.ok) {
+        console.log('Server is available');
+        return true;
+      } else {
+        console.error('Server responded with error:', response.status);
+        return false;
+      }
+    } catch (error) {
+      console.error('Server is unreachable:', error);
+      return false;
+    }
+  }
+
+  // Check if login is still valid
+  async function checkLoginStatus() {
+    const loginData = JSON.parse(localStorage.getItem('loginData'));
+    const now = Date.now();
+    const oneDayInMs = 24 * 60 * 60 * 1000; // 1 day in milliseconds
+
+    if (loginData && loginData.isLoggedIn && loginData.timestamp && (now - loginData.timestamp < oneDayInMs)) {
+      const serverAvailable = await checkServerAvailability();
+      if (serverAvailable) {
+        console.log('Login is valid and server is available');
+        isLoggedIn = true;
+        updateLoginUI();
+        return true;
+      } else {
+        console.log('Server is down, login status invalid');
+        isLoggedIn = false;
+        localStorage.removeItem('loginData');
+        updateLoginUI();
+        return false;
+      }
+    } else {
+      console.log('Login expired or missing in localStorage');
+      isLoggedIn = false;
+      updateLoginUI();
+      return false;
+    }
+  }
+
+  // Initialize the app
+  async function initApp() {
+    // Check login status but don't redirect
+    const isValidLogin = await checkLoginStatus();
+    
+    if (isValidLogin) {
+      await updateEmotionIndicator();
+      await loadCurrentPlaylist();
+      await loadRecentlyPlayed();
+      await loadLikedSongs();
+      playRandomSong();
+    } else {
+      // Load UI with disabled controls, no redirect
+      updateLoginUI();
+    }
+  }
+
+  // Update UI based on login status
+  function updateLoginUI() {
+    if (isLoggedIn) {
+      loginButton.textContent = 'Logout';
+      loginButton.classList.remove('logged-out');
+      loginButton.classList.add('logged-in');
+      enablePlayerControls(true);
+    } else {
+      loginButton.textContent = 'Login';
+      loginButton.classList.remove('logged-in');
+      loginButton.classList.add('logged-out');
+      enablePlayerControls(false);
+      audio.pause();
+      audio.src = '';
+    }
+  }
+
+  // Enable or disable player controls based on login status
+  function enablePlayerControls(enabled) {
+    const controls = [
+      playBtn, pauseBtn, nextBtn, prevBtn, likeBtn,
+      progressBar, volumeSlider, volDown, volUp
+    ];
+    controls.forEach(control => {
+      control.disabled = !enabled;
+    });
+    const playlistButtons = document.querySelectorAll('.left-placeholder');
+    playlistButtons.forEach(button => {
+      button.style.pointerEvents = enabled ? 'auto' : 'none';
+      button.style.opacity = enabled ? '1' : '0.5';
+    });
+    emotionButton.disabled = !enabled;
+    emotionButton.style.opacity = enabled ? '1' : '0.5';
+    searchInput.disabled = !enabled;
+    searchInput.style.opacity = enabled ? '1' : '0.5';
+  }
+
+  // Redirect to login page
+  function redirectToLoginPage() {
+    console.log('Redirecting to 13.html');
+    window.location.href = '13.html';
+  }
+
+  // Handle login/logout button click
+  async function handleLoginButtonClick() {
+    if (isLoggedIn) {
+      handleLogout();
+    } else {
+      const serverAvailable = await checkServerAvailability();
+      if (serverAvailable) {
+        console.log('Server is available, redirecting to login');
+        redirectToLoginPage();
+      } else {
+        console.log('Server is unreachable, redirecting to login');
+        localStorage.removeItem('loginData');
+        redirectToLoginPage();
+      }
+    }
+  }
+
+  // Handle logout
+  function handleLogout() {
+    isLoggedIn = false;
+    localStorage.removeItem('loginData');
+    updateLoginUI();
+    currentSong = null;
+    playerThumbnail.src = 'default_album.png';
+    progressBar.value = 0;
+    currentTimeEl.textContent = '0:00';
+    totalTimeEl.textContent = '0:00';
+    redirectToLoginPage();
+  }
+
+  // Update emotion indicator from backend
+  async function updateEmotionIndicator() {
+    try {
+      const response = await fetch(`${API_BASE}/current-emotion`);
+      const data = await response.json();
+      currentEmotion = data.emotion;
+      emotionIndicator.textContent = `Emotion: ${currentEmotion}`;
+      const emotionEmojis = {
+        'happy': '😊',
+        'sad': '😢',
+        'angry': '😠',
+        'calm': '😌',
+        'energetic': '💪'
+      };
+      emotionButton.textContent = emotionEmojis[currentEmotion] || '😊';
+    } catch (error) {
+      console.error('Failed to fetch emotion:', error);
+      emotionIndicator.textContent = 'Emotion: Unknown';
+    }
+  }
+
+  // Load current playlist based on emotion
+  async function loadCurrentPlaylist() {
+    try {
+      const response = await fetch(`${API_BASE}/current-playlist`);
+      const data = await response.json();
+      currentPlaylist = data;
+      renderPlaylist(currentPlaylist, currentPlaylistSection);
+    } catch (error) {
+      console.error('Failed to load playlist:', error);
+    }
+  }
+
+  // Load recently played songs
+  async function loadRecentlyPlayed() {
+    try {
+      const response = await fetch(`${API_BASE}/recently-played`);
+      const data = await response.json();
+      recentlyPlayed = data;
+      renderPlaylist(recentlyPlayed, recentlyPlayedList, true);
+    } catch (error) {
+      console.error('Failed to load recently played:', error);
+    }
+  }
+
+  // Load liked songs
+  async function loadLikedSongs() {
+    try {
+      const response = await fetch(`${API_BASE}/liked-songs`);
+      const data = await response.json();
+      likedSongs = data;
+    } catch (error) {
+      console.error('Failed to load liked songs:', error);
+    }
+  }
+
+  // Render playlist to a container
+  function renderPlaylist(songs, container, isRecent = false) {
+    container.innerHTML = '';
+    if (songs.length === 0) {
+      container.innerHTML = '<div style="color: #ff4d94; text-align: center; width: 100%;">No songs available</div>';
+      return;
+    }
+    songs.forEach(song => {
+      const songElement = document.createElement('div');
+      songElement.className = 'recent-item-horizontal';
+      songElement.innerHTML = `
+        <img src="${song.thumbnail || 'default_album.png'}" alt="${song.title}">
+        <span>${song.title}</span>
+        <small>${song.artist || 'Unknown Artist'}</small>
+      `;
+      songElement.addEventListener('click', () => {
+        if (isLoggedIn) {
+          playSpecificSong(song);
+        }
+      });
+      container.appendChild(songElement);
+    });
+  }
+
+  // Render playlist for overlay
+  function renderPlaylistOverlay(songs, title) {
+    overlayTitle.textContent = title;
+    overlayContent.innerHTML = '';
+    if (songs.length === 0) {
+      overlayContent.innerHTML = '<div style="color: #ff4d94; text-align: center; width: 100%;">No songs available</div>';
+      return;
+    }
+    songs.forEach(song => {
+      const songElement = document.createElement('div');
+      songElement.className = 'playlist-overlay-item';
+      songElement.innerHTML = `
+        <img src="${song.thumbnail || 'default_album.png'}" alt="${song.title}">
+        <span>${song.title}</span>
+        <small>${song.artist || 'Unknown Artist'}</small>
+      `;
+      songElement.addEventListener('click', () => {
+        if (isLoggedIn) {
+          playSpecificSong(song);
+          closePlaylistOverlay();
+        }
+      });
+      overlayContent.appendChild(songElement);
+    });
+  }
+
+  // Open playlist overlay
+  function openPlaylistOverlay(songs, title, type) {
+    if (!isLoggedIn) return;
+    renderPlaylistOverlay(songs, title);
+    playlistOverlay.classList.add('active');
+    isPlaylistOverlayOpen = true;
+    currentOverlayType = type;
+  }
+
+  // Close playlist overlay
+  function closePlaylistOverlay() {
+    playlistOverlay.classList.remove('active');
+    playlistOverlay.classList.add('closing');
+    setTimeout(() => {
+      playlistOverlay.classList.remove('closing');
+      isPlaylistOverlayOpen = false;
+      currentOverlayType = '';
+    }, 500);
+  }
+
+  // Play a random song based on emotion
+  async function playRandomSong() {
+    if (!isLoggedIn) return;
+    try {
+      const response = await fetch(`${API_BASE}/play-song`);
+      const data = await response.json();
+      if (response.ok) {
+        loadSong(data);
+        await loadRecentlyPlayed();
+      } else {
+        console.error('Failed to play song:', data.error);
+      }
+    } catch (error) {
+      console.error('Error playing random song:', error);
+    }
+  }
+
+  // Play a specific song
+  async function playSpecificSong(song) {
+    if (!isLoggedIn) return;
+    try {
+      const response = await fetch(`${API_BASE}/play-specific-song`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: song.cloud_url,
+          title: song.title,
+          artist: song.artist,
+          emotion: song.emotion,
+          thumbnail: song.thumbnail
+        })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        loadSong(data);
+        await loadRecentlyPlayed();
+      } else {
+        console.error('Failed to play specific song:', data.error);
+      }
+    } catch (error) {
+      console.error('Error playing specific song:', error);
+    }
+  }
+
+  // Load song into player
+  function loadSong(songData) {
+    currentSong = songData;
+    audio.src = songData.url;
+    playerThumbnail.src = songData.thumbnail || 'default_album.png';
+    updateLikeButtonState();
+    audio.play().catch(e => console.log('Auto-play prevented:', e));
+  }
+
+  // Update like button state
+  function updateLikeButtonState() {
+    if (!currentSong) return;
+    const isLiked = likedSongs.some(song => song.cloud_url === currentSong.url);
+    likeBtn.classList.toggle('liked', isLiked);
+  }
+
+  // Like/unlike current song
+  async function likeCurrentSong() {
+    if (!currentSong || !isLoggedIn) return;
+    try {
+      const response = await fetch(`${API_BASE}/like-song`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: currentSong.url,
+          title: currentSong.title,
+          artist: currentSong.artist,
+          emotion: currentSong.emotion,
+          thumbnail: currentSong.thumbnail
+        })
+      });
+      if (response.ok) {
+        await loadLikedSongs();
+        updateLikeButtonState();
+      } else {
+        console.error('Failed to like song');
+      }
+    } catch (error) {
+      console.error('Error liking song:', error);
+    }
+  }
+
+  // Change emotion
+  async function changeEmotion(newEmotion) {
+    if (!isLoggedIn) return;
+    try {
+      const response = await fetch(`${API_BASE}/update-emotion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emotion: newEmotion })
+      });
+      if (response.ok) {
+        currentEmotion = newEmotion;
+        await updateEmotionIndicator();
+        await loadCurrentPlaylist();
+        playRandomSong();
+      }
+    } catch (error) {
+      console.error('Error updating emotion:', error);
+    }
+  }
+
+  // Toggle sidebar
+  function toggleSidebar() {
+    isExpanded = !isExpanded;
+    if (window.innerWidth <= 768) {
+      barLeft.classList.toggle("expanded", isExpanded);
+    } else {
+      barLeft.style.flex = isExpanded ? '0.6' : '0.2';
+      barMiddle.style.flex = isExpanded ? '1.35' : '1.75';
+    }
+  }
+
+  // Handle playlist button click
+  function handlePlaylistButtonClick(buttonId) {
+    if (!isLoggedIn) return;
+    const now = Date.now();
+    const isDoubleClick = (now - lastPlaylistClickTime) < 300;
+    if (isDoubleClick && isPlaylistOverlayOpen) {
+      closePlaylistOverlay();
+      isExpanded = false;
+      if (window.innerWidth <= 768) {
+        barLeft.classList.remove("expanded");
+      } else {
+        barLeft.style.flex = '0.2';
+        barMiddle.style.flex = '1.75';
+      }
+    } else {
+      if (isPlaylistOverlayOpen && currentOverlayType === buttonId) {
+        closePlaylistOverlay();
+      } else {
+        if (buttonId === 'playlistButton1') {
+          openPlaylistOverlay(currentPlaylist, 'Current Playlist', buttonId);
+        } else if (buttonId === 'playlistButton2') {
+          openPlaylistOverlay(likedSongs, 'Liked Songs', buttonId);
+        }
+      }
+    }
+    lastPlaylistClickTime = now;
+  }
+
+  // Event Listeners
+  playBtn.addEventListener('click', () => {
+    if (isLoggedIn) audio.play();
+  });
+  pauseBtn.addEventListener('click', () => {
+    if (isLoggedIn) audio.pause();
+  });
+  nextBtn.addEventListener('click', () => {
+    if (isLoggedIn) playRandomSong();
+  });
+  prevBtn.addEventListener('click', () => {
+    if (isLoggedIn) playRandomSong();
+  });
+  likeBtn.addEventListener('click', likeCurrentSong);
+  volumeSlider.addEventListener('input', () => {
+    if (isLoggedIn) audio.volume = volumeSlider.value / 100;
+  });
+  volDown.addEventListener('click', () => {
+    if (!isLoggedIn) return;
+    volumeSlider.value = Math.max(0, volumeSlider.value - 10);
+    audio.volume = volumeSlider.value / 100;
+  });
+  volUp.addEventListener('click', () => {
+    if (!isLoggedIn) return;
+    volumeSlider.value = Math.min(100, parseInt(volumeSlider.value) + 10);
+    audio.volume = volumeSlider.value / 100;
+  });
+  audio.addEventListener('timeupdate', () => {
+    if (!isNaN(audio.duration)) {
+      progressBar.value = (audio.currentTime / audio.duration) * 100;
+      currentTimeEl.textContent = `${Math.floor(audio.currentTime / 60)}:${Math.floor(audio.currentTime % 60).toString().padStart(2, '0')}`;
+      totalTimeEl.textContent = `${Math.floor(audio.duration / 60)}:${Math.floor(audio.duration % 60).toString().padStart(2, '0')}`;
+    }
+  });
+  progressBar.addEventListener('input', () => {
+    if (!isNaN(audio.duration) && isLoggedIn) {
+      audio.currentTime = (progressBar.value / 100) * audio.duration;
+    }
+  });
+  loginButton.addEventListener('click', handleLoginButtonClick);
+  toggleSidebarButton.addEventListener('click', toggleSidebar);
+  document.getElementById('playlistButton1').addEventListener('click', function(e) {
+    e.stopPropagation();
+    handlePlaylistButtonClick('playlistButton1');
+  });
+  document.getElementById('playlistButton2').addEventListener('click', function(e) {
+    e.stopPropagation();
+    handlePlaylistButtonClick('playlistButton2');
+  });
+  document.body.addEventListener('click', (e) => {
+    if (isExpanded && !isPlaylistOverlayOpen && !e.target.closest('.playlist-overlay') && !e.target.closest('.bar-left')) {
+      isExpanded = false;
+      if (window.innerWidth <= 768) {
+        barLeft.classList.remove("expanded");
+      } else {
+        barLeft.style.flex = '0.2';
+        barMiddle.style.flex = '1.75';
+      }
+    }
+  });
+  closePlaylist.addEventListener('click', closePlaylistOverlay);
+  emotionButton.addEventListener('click', () => {
+    if (!isLoggedIn) return;
+    const emotions = ['happy', 'sad', 'angry', 'calm', 'energetic'];
+    const currentIndex = emotions.indexOf(currentEmotion);
+    const nextIndex = (currentIndex + 1) % emotions.length;
+    changeEmotion(emotions[nextIndex]);
+  });
+  searchInput.addEventListener('input', (e) => {
+    if (!isLoggedIn) return;
+    const searchTerm = e.target.value.toLowerCase();
+    if (searchTerm) {
+      const filteredSongs = currentPlaylist.filter(song => 
+        song.title.toLowerCase().includes(searchTerm) || 
+        (song.artist && song.artist.toLowerCase().includes(searchTerm))
+      );
+      renderPlaylist(filteredSongs, currentPlaylistSection);
+    } else {
+      renderPlaylist(currentPlaylist, currentPlaylistSection);
+    }
+  });
+  playlistSearch.addEventListener('input', (e) => {
+    if (!isLoggedIn) return;
+    const searchTerm = e.target.value.toLowerCase();
+    let songsToFilter = [];
+    if (currentOverlayType === 'playlistButton1') {
+      songsToFilter = currentPlaylist;
+    } else if (currentOverlayType === 'playlistButton2') {
+      songsToFilter = likedSongs;
+    }
+    if (searchTerm) {
+      const filteredSongs = songsToFilter.filter(song => 
+        song.title.toLowerCase().includes(searchTerm) || 
+        (song.artist && song.artist.toLowerCase().includes(searchTerm))
+      );
+      renderPlaylistOverlay(filteredSongs, overlayTitle.textContent);
+    } else {
+      renderPlaylistOverlay(songsToFilter, overlayTitle.textContent);
+    }
+  });
+
+  // Initialize the app when the page loads
+  window.addEventListener('DOMContentLoaded', initApp);
+</script>
+</body>
+</html>
