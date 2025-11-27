@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moodify – Emotion-Based Player</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0f0f1e;
+    --accent: #BA55D3;
+    --dark: #1a1a2e;
+    --light: #e6e6fa;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    height:100vh; width:100vw; overflow:hidden;
+    font-family:'Poppins',sans-serif;
+    background:linear-gradient(135deg,#000,#4B0082,#BA55D3);
+    color:var(--light);
+    display:flex;
+  }
+
+  /* Layout */
+  .sidebar   { width:80px; background:var(--dark); padding:20px 10px; display:flex; flex-direction:column; gap:15px; transition:width .4s; position:relative; z-index:10; }
+  .sidebar.expanded { width:240px; }
+  .main      { flex:1; display:flex; flex-direction:column; }
+  .middle    { flex:1; padding:20px; overflow-y:auto; }
+  .player    { height:90px; background:rgba(26,26,26,.95); backdrop-filter:blur(10px); display:flex; align-items:center; padding:0 20px; gap:20px; border-top:1px solid var(--accent); }
+
+  /* Common buttons */
+  button {
+    background:linear-gradient(135deg,#4B0082,#9932CC);
+    border:none; border-radius:12px; color:var(--light);
+    cursor:pointer; transition:all .3s;
+  }
+  button:hover { background:linear-gradient(135deg,#BA55D3,#DDA0DD); transform:scale(1.05); }
+  button:active { transform:scale(.95); }
+
+  /* Sidebar items */
+  .menu-btn      { height:50px; font-weight:600; }
+  .playlist-box  { height:140px; border-radius:12px; background:#222; overflow:hidden; cursor:pointer; position:relative; }
+  .playlist-box img { width:100%; height:100%; object-fit:cover; }
+  .playlist-box.empty::after { content:"No songs"; position:absolute; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.6); font-size:14px; }
+
+  /* Middle area */
+  .search-row   { display:flex; gap:10px; margin-bottom:20px; }
+  .search       { flex:1; padding:12px 16px; background:#222; border:none; border-radius:12px; color:var(--light); }
+  .camera-btn   { width:50px; height:50px; font-size:22px; }
+
+  .section      { background:#222; border-radius:12px; padding:16px; margin-bottom:20px; }
+  .section h3   { margin-bottom:12px; }
+  .song-grid    { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; }
+  .song-card    { background:#1a1a2e; border-radius:10px; padding:10px; text-align:center; cursor:pointer; transition:.3s; }
+  .song-card:hover { background:#333; transform:scale(1.05); }
+  .song-card img { width:100%; height:120px; object-fit:cover; border-radius:8px; margin-bottom:8px; }
+
+  /* Player bar */
+  .controls     { display:flex; align-items:center; gap:12px; }
+  .controls button { width:44px; height:44px; font-size:18px; }
+  .progress     { flex:1; display:flex; flex-direction:column; gap:4px; }
+  #progressBar  { width:100%; height:5px; background:#444; border-radius:5px; }
+  #progressBar::-webkit-slider-thumb { width:14px; height:14px; background:var(--accent); border-radius:50%; }
+
+  .thumbnail    { width:300px; height:340px; border-radius:16px; object-fit:cover; box-shadow:0 10px 30px rgba(0,0,0,.5); }
+  .equalizer    { display:flex; gap:4px; margin:15px 0; }
+  .bar          { width:20px; height:60px; background:var(--accent); border-radius:4px; transform:scaleY(.3); transition:.3s; }
+  .bar.active   { animation:eq 1.2s ease-in-out infinite alternate; }
+
+  @keyframes eq {
+    to { transform:scaleY(2); background:#FF00FF; }
+  }
+
+  /* Overlay */
+  .overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.9); display:none; align-items:center; justify-content:center; z-index:100;
+  }
+  .overlay.active { display:flex; }
+  .overlay-content { background:var(--dark); width:90%; max-width:800px; max-height:90vh; border-radius:16px; padding:20px; overflow-y:auto; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <button class="menu-btn" id="menuBtn">☰ Menu</button>
+  <div class="playlist-box" id="currentBox">Current Playlist</div>
+  <div class="playlist-box" id="likedBox">Liked Songs</div>
+  <button id="loginBtn" style="margin-top:auto;">Login</button>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+  <div class="middle">
+    <div class="search-row">
+      <input type="text" class="search" placeholder="Search songs..." id="search">
+      <button class="camera-btn" id="emotionBtn">Detect Emotion</button>
+    </div>
+
+    <div class="section">
+      <h3>Recently Played</h3>
+      <div class="song-grid" id="recent"></div>
+    </div>
+
+    <div class="section">
+      <h3>Current Playlist</h3>
+      <div class="song-grid" id="current"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Player -->
+  <div class="player">
+    <div class="controls">
+      <button id="prev">Prev</button>
+      <button id="play">Play</button>
+      <button id="pause">Pause</button>
+      <button id="next">Next</button>
+      <button id="like">Heart</button>
+    </div>
+    <div class="progress">
+      <input type="range" id="progressBar" min="0" max="100" value="0">
+      <div style="display:flex; justify-content:space-between; font-size:12px;">
+        <span id="cur">0:00</span>
+        <span id="tot">0:00</span>
+      </div>
+    </div>
+    <button id="volume">Volume</button>
+  </div>
+</div>
+
+<!-- Right Panel (Thumbnail + Equalizer + Lyrics) -->
+<div style="width:380px; padding:20px; display:flex; flex-direction:column; align-items:center; gap:20px; background:var(--dark);">
+  <img src="default_album.png" class="thumbnail" id="thumb">
+  <div class="equalizer">
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+  </div>
+  <div style="width:100%; background:#222; border-radius:12px; padding:16px; flex:1; overflow-y:auto;" id="lyrics">
+    Lyrics will appear here...
+  </div>
+</div>
+
+<audio id="audio"></audio>
+
+<script>
+  const API = 'http://localhost:5001';
+  let loggedIn = localStorage.getItem('loggedIn') === 'true';
+  let currentSong = null;
+  let playlist = [], liked = [], recent = [];
+
+  const els = {
+    sidebar: document.getElementById('sidebar'),
+    menuBtn: document.getElementById('menuBtn'),
+    loginBtn: document.getElementById('loginBtn'),
+    currentBox: document.getElementById('currentBox'),
+    likedBox: document.getElementById('likedBox'),
+    search: document.getElementById('search'),
+    emotionBtn: document.getElementById('emotionBtn'),
+    recent: document.getElementById('recent'),
+    current: document.getElementById('current'),
+    play: document.getElementById('play'),
+    pause: document.getElementById('pause'),
+    next: document.getElementById('next'),
+    prev: document.getElementById('prev'),
+    like: document.getElementById('like'),
+    progress: document.getElementById('progressBar'),
+    cur: document.getElementById('cur'),
+    tot: document.getElementById('tot'),
+    thumb: document.getElementById('thumb'),
+    audio: document.getElementById('audio'),
+    lyrics: document.getElementById('lyrics'),
+    bars: document.querySelectorAll('.bar')
+  };
+
+  // Simple render function
+  function render(container, songs) {
+    container.innerHTML = songs.length ? '' : '<p style="grid-column:1/-1; text-align:center; opacity:.6;">No songs</p>';
+    songs.forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'song-card';
+      div.innerHTML = `<img src="${s.thumbnail || 'default_album.png'}"><span>${s.title}</span><small>${s.artist||''}</small>`;
+      div.onclick = () => playSong(s);
+      container.appendChild(div);
+    });
+  }
+
+  // Play song
+  async function playSong(song) {
+    if (!loggedIn) return;
+    const res = await fetch(`${API}/play-specific-song`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(song)});
+    const data = await res.json();
+    load(data);
+    loadRecent();
+  }
+
+  function load(data) {
+    currentSong = data;
+    els.audio.src = data.url;
+    els.thumb.src = data.thumbnail || 'default_album.png';
+    els.audio.play();
+    els.bars.forEach(b => b.classList.add('active'));
+    els.lyrics.textContent = `Lyrics for "${data.title}" coming soon...`;
+  }
+
+  async function loadRecent() {
+    const r = await fetch(`${API}/recently-played`); recent = await r.json();
+    render(els.recent, recent);
+  }
+
+  async function loadCurrent() {
+    const r = await fetch(`${API}/current-playlist`); playlist = await r.json();
+    render(els.current, playlist);
+    renderBox(els.currentBox, playlist);
+  }
+
+  async function loadLiked() {
+    const r = await fetch(`${API}/liked-songs`); liked = await r.json();
+    renderBox(els.likedBox, liked);
+  }
+
+  function renderBox(box, songs) {
+    box.innerHTML = '';
+    box.classList.toggle('empty', !songs.length);
+    if (!songs.length) return;
+    const max = Math.min(4, songs.length);
+    for (let i=0; i<max; i++) {
+      const img = new Image();
+      img.src = songs[i].thumbnail || 'default_album.png';
+      img.style.width = max===1 ? '100%' : '50%';
+      img.style.height = max<=2 ? '100%' : '50%';
+      box.appendChild(img);
+    }
+  }
+
+  // Controls
+  els.play.onclick = () => els.audio.play();
+  els.pause.onclick = () => els.audio.pause();
+  els.next.onclick = () => fetch(`${API}/play-song`).then(r=>r.json()).then(load);
+  els.audio.ontimeupdate = () => {
+    const p = (els.audio.currentTime / els.audio.duration) * 100 || 0;
+    els.progress.value = p;
+    els.cur.textContent = format(els.audio.currentTime);
+    els.tot.textContent = format(els.audio.duration);
+  };
+  els.progress.oninput = () => els.audio.currentTime = (els.progress.value/100)*els.audio.duration;
+
+  function format(t) { if (!t) return '0:00'; const m=Math.floor(t/60); const s=Math.floor(t%60); return `${m}:${s.toString().padStart(2,'0')}`; }
+
+  // Login / Logout
+  els.loginBtn.onclick = () => {
+    if (loggedIn) {
+      loggedIn = false; localStorage.removeItem('loggedIn');
+      els.loginBtn.textContent = 'Login';
+      location.reload();
+    } else {
+      location.href = '13.html';
+    }
+  };
+
+  // Sidebar toggle
+  els.menuBtn.onclick = () => els.sidebar.classList.toggle('expanded');
+
+  // Init
+  if (loggedIn) {
+    els.loginBtn.textContent = 'Logout';
+    loadCurrent();
+    loadRecent();
+    loadLiked();
+    fetch(`${API}/play-song`).then(r=>r.json()).then(load);
+  }
+</script>
+</body>
+</html>
