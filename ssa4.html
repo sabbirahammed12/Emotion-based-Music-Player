@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mood Music Player</title>
+<style>
+  body {
+    margin: 0; padding: 0; height: 100vh;
+    background: linear-gradient(135deg, #1a0033, #4B0082);
+    color: #e6e6fa; font-family: 'Segoe UI', sans-serif;
+    display: flex; flex-direction: column;
+  }
+  .container { flex: 1; display: flex; }
+  .sidebar { width: 250px; background: rgba(0,0,0,0.5); padding: 20px; }
+  .main { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+  .player { background: rgba(0,0,0,0.6); padding: 20px; border-radius: 20px; text-align: center; }
+  .controls { display: flex; justify-content: center; gap: 20px; margin: 15px 0; }
+  button { background: #9932CC; border: none; padding: 12px 20px; border-radius: 50px; color: white; cursor: pointer; font-size: 18px; }
+  button:hover { background: #BA55D3; transform: scale(1.05); }
+  .thumbnail { width: 200px; height: 200px; border-radius: 20px; object-fit: cover; box-shadow: 0 0 20px #BA55D3; }
+  .emotion { position: fixed; top: 20px; right: 20px; font-size: 24px; }
+  .lyrics { background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; max-height: 300px; overflow-y: auto; text-align: center; }
+  .now-playing { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.8); padding: 15px; display: flex; align-items: center; gap: 15px; }
+  .progress { flex: 1; height: 6px; background: #444; border-radius: 3px; }
+  .progress-fill { height: 100%; width: 0%; background: #FF00FF; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+  <div class="emotion" id="emotion">Detecting mood...</div>
+
+  <div class="container">
+    <div class="sidebar">
+      <h2>🎵 Mood Music</h2>
+      <button onclick="changeMood()">Change Mood</button>
+      <br><br>
+      <button onclick="location.href='15.html'">Login / Logout</button>
+    </div>
+
+    <div class="main">
+      <div class="player">
+        <img src="default_album.png" class="thumbnail" id="thumb">
+        <h2 id="title">Loading song...</h2>
+        <p id="artist">Detecting your mood...</p>
+
+        <div class="controls">
+          <button onclick="prev()">⏮</button>
+          <button onclick="play()" id="playBtn">▶</button>
+          <button onclick="pause()">⏸</button>
+          <button onclick="next()">⏭</button>
+          <button onclick="like()" id="likeBtn">♡</button>
+        </div>
+
+        <div style="margin:20px 0">
+          <div class="progress"><div class="progress-fill" id="progress"></div></div>
+          <small><span id="current">0:00</span> / <span id="duration">0:00</span></small>
+        </div>
+      </div>
+
+      <div class="lyrics" id="lyrics">
+        <h3>Lyrics</h3>
+        <div id="lyricsText">Click play to start</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="now-playing">
+    <img src="default_album.png" width="60" height="60" style="border-radius:10px" id="smallThumb">
+    <div style="flex:1">
+      <strong id="smallTitle">No song playing</strong><br>
+      <small id="smallArtist"></small>
+    </div>
+    <button onclick="play()">▶</button>
+    <button onclick="next()">⏭</button>
+  </div>
+
+  <audio id="audio"></audio>
+
+<script>
+  const API = 'http://localhost:5001';
+  const audio = document.getElementById('audio');
+  let currentSong = null;
+
+  const moods = ['happy', 'sad', 'angry', 'calm', 'energetic'];
+  const emojis = { happy:'😊', sad:'😢', angry:'😠', calm:'😌', energetic:'💪' };
+
+  function $(id) { return document.getElementById(id); }
+
+  async function init() {
+    try {
+      const res = await fetch(`${API}/current-emotion`);
+      if (res.ok) {
+        const { emotion } = await res.json();
+        $('emotion').textContent = emojis[emotion] || '😊';
+        playRandom();
+      } else {
+        $('emotion').textContent = 'Login →';
+      }
+    } catch(e) { $('emotion').textContent = 'Offline'; }
+  }
+
+  async function playRandom() {
+    const res = await fetch(`${API}/play-song`);
+    if (!res.ok) return alert("Login required or server off");
+    const song = await res.json();
+    loadSong(song);
+  }
+
+  function loadSong(song) {
+    currentSong = song;
+    audio.src = song.url;
+    audio.play();
+    
+    $('thumb').src = $('smallThumb').src = song.thumbnail || 'default_album.png';
+    $('title').textContent = song.title;
+    $('artist').textContent = song.artist || 'Unknown';
+    $('smallTitle').textContent = song.title;
+    $('smallArtist').textContent = song.artist || '';
+    
+    $('likeBtn').textContent = (song.liked ? '♥' : '♡');
+    fetchLyrics(song.title, song.artist);
+  }
+
+  async function fetchLyrics(title, artist) {
+    try {
+      const res = await fetch(`${API}/lyrics`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title, artist}) });
+      const data = await res.json();
+      $('lyricsText').innerHTML = data.lyrics ? data.lyrics.replace(/\n/g, '<br>') : 'No lyrics found';
+    } catch(e) {
+      $('lyricsText').textContent = 'Lyrics not available';
+    }
+  }
+
+  function play() { audio.play(); $('playBtn').textContent = '⏵'; }
+  function pause() { audio.pause(); $('playBtn').textContent = '▶'; }
+  function next() { playRandom(); }
+  function prev() { playRandom(); }
+
+  async function like() {
+    if (!currentSong) return;
+    await fetch(`${API}/like-song`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(currentSong) });
+    currentSong.liked = !currentSong.liked;
+    $('likeBtn').textContent = currentSong.liked ? '♥' : '♡';
+  }
+
+  async function changeMood() {
+    const res = await fetch(`${API}/current-emotion`);
+    const { emotion } = await res.json();
+    const i = moods.indexOf(emotion);
+    const next = moods[(i + 1) % moods.length];
+    await fetch(`${API}/update-emotion`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({emotion: next}) });
+    $('emotion').textContent = emojis[next];
+    playRandom();
+  }
+
+  // Progress bar
+  audio.addEventListener('timeupdate', () => {
+    if (audio.duration) {
+      const percent = (audio.currentTime / audio.duration) * 100;
+      $('progress').style.width = percent + '%';
+      $('current').textContent = format(audio.currentTime);
+      $('duration').textContent = format(audio.duration);
+    }
+  });
+
+  audio.addEventListener('ended', playRandom);
+
+  function format(sec) {
+    const m = Math.floor(sec/60);
+    const s = Math.floor(sec%60).toString().padStart(2,'0');
+    return `${m}:${s}`;
+  }
+
+  init();
+</script>
+</body>
+</html>
