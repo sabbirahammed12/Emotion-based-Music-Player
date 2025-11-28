@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emotion-Based Music Player</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { 
+    height: 100%; 
+    width: 100%; 
+    display: flex; 
+    font-family: 'Poppins', sans-serif; 
+    background: linear-gradient(135deg, #000000, #2A005A, #6A0088); 
+    color: #E6E6FA; 
+    overflow: hidden;
+  }
+
+  /* Layout */
+  .right-section { flex: 2.6; display: flex; flex-direction: column; }
+  .upper-right { flex: 1; display: flex; }
+  .bar { height: 100%; transition: all 0.4s ease; display: flex; flex-direction: column; }
+
+  /* Left Sidebar */
+  .bar-left { 
+    flex: 0.25; 
+    background: linear-gradient(135deg, #0F001A, #3A0088); 
+    padding-top: 20px; 
+    position: relative;
+    gap: 8px;
+    box-shadow: 2px 0 15px rgba(138, 43, 226, 0.5);
+    border-right: 1px solid #BA55D3;
+    z-index: 11;
+  }
+
+  /* Toggle Button */
+  .toggle-sidebar-button {
+    width: 85%; height: 50px; border-radius: 16px; border: none;
+    background: linear-gradient(135deg, #4B0082, #BA55D3); color: #E6E6FA;
+    font-weight: 600; font-size: 16px; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: all 0.3s;
+    margin: 0 auto 15px;
+  }
+  .toggle-sidebar-button:hover { transform: translateY(-2px); background: linear-gradient(135deg, #BA55D3, #FF00FF); }
+
+  /* Playlist Thumbnails */
+  .playlist-label { 
+    width: 85%; text-align: center; padding: 6px; border-radius: 8px; 
+    background: linear-gradient(135deg, #4B0082, #9932CC); font-size: 13px; font-weight: 600;
+    margin: 10px auto 4px;
+  }
+  .current-playlist-placeholder, .liked-songs-placeholder {
+    width: 85%; height: 140px; border-radius: 12px; overflow: hidden;
+    display: flex; flex-wrap: wrap; cursor: pointer; position: relative;
+    background: #1A0033; border: 2px solid transparent;
+    border-image: linear-gradient(135deg, #BA55D3, #FF69B4) 1;
+    transition: all 0.3s;
+  }
+  .current-playlist-placeholder:hover, .liked-songs-placeholder:hover {
+    transform: scale(1.05); box-shadow: 0 8px 20px rgba(186, 85, 211, 0.6);
+  }
+  .current-playlist-placeholder img, .liked-songs-placeholder img {
+    object-fit: cover; transition: transform 0.3s;
+  }
+  .current-playlist-placeholder img:hover, .liked-songs-placeholder img:hover { transform: scale(1.15); }
+
+  /* Dynamic image sizing */
+  .count-1 { width: 100% !important; height: 100% !important; border-radius: 10px !important; }
+  .count-2 { width: 50% !important; height: 100% !important; }
+  .count-2:first-child { border-radius: 10px 0 0 10px; }
+  .count-2:last-child { border-radius: 0 10px 10px 0; }
+  .count-3, .count-4 { width: 50%; height: 50%; }
+  .count-3:first-child, .count-4:nth-child(-n+2) { border-radius: 10px 10px 0 0; }
+  .count-3:nth-child(2), .count-4:nth-child(3) { border-radius: 0 0 0 10px; }
+  .count-3:last-child, .count-4:last-child { border-radius: 0 0 10px 10px; }
+
+  .empty::after { content: 'No songs'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #9932CC; font-size: 14px; }
+
+  /* Login Button */
+  .left-login-button {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    width: 85%; height: 50px; border-radius: 16px; border: none;
+    background: linear-gradient(135deg, #4B0082, #BA55D3); color: #fff;
+    font-weight: 600; cursor: pointer; transition: all 0.3s;
+  }
+  .left-login-button:hover { background: linear-gradient(135deg, #BA55D3, #FF69B4); transform: translateX(-50%) scale(1.05); }
+
+  /* Middle & Right Bars */
+  .bar-middle { flex: 1.6; background: linear-gradient(135deg, #0A001A, #3A0088); padding: 20px; }
+  .bar-right { flex: 1; background: linear-gradient(135deg, #1A0033, #4B0082); padding: 20px; gap: 12px; }
+
+  /* Bottom Player Bar */
+  .bar-bottom {
+    height: 90px; background: rgba(20, 0, 50, 0.95); backdrop-filter: blur(12px);
+    border-top: 1px solid #BA55D3; display: flex; align-items: center;
+    padding: 0 20px; gap: 15px; z-index: 10;
+  }
+
+  /* Controls */
+  .player-controls button, .volume-controls button {
+    background: linear-gradient(135deg, #4B0082, #BA55D3);
+    border: none; width: 44px; height: 44px; border-radius: 12px;
+    color: #E6E6FA; font-size: 18px; cursor: pointer;
+    transition: all 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  }
+  .player-controls button:hover, .volume-controls button:hover {
+    background: linear-gradient(135deg, #BA55D3, #FF69B4); transform: scale(1.1);
+  }
+  .like-button.liked { color: #FF1493 !important; }
+
+  /* Progress & Volume */
+  #progressBar { height: 6px; background: #333; border-radius: 3px; }
+  #progressBar::-webkit-slider-thumb { width: 16px; height: 16px; background: #BA55D3; border-radius: 50%; }
+  .volume-slider-container {
+    position: absolute; bottom: 60px; width: 40px; height: 120px;
+    background: rgba(30,0,80,0.9); border-radius: 12px; padding: 10px;
+    opacity: 0; visibility: hidden; transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(186,85,211,0.5);
+  }
+  .volume-slider-container.active { opacity: 1; visibility: visible; }
+
+  /* Equalizer */
+  @keyframes equalizer {
+    0%, 100% { transform: scaleY(0.3); }
+    50% { transform: scaleY(2); }
+  }
+  .equalizer-bar {
+    width: 22px; height: 60px; background: linear-gradient(to top, #BA55D3, #FF69B4);
+    border-radius: 6px; transform: scaleY(0.3);
+  }
+  .equalizer-bar.active { animation: equalizer 0.6s ease-in-out infinite alternate; }
+
+  /* Lyrics */
+  .lyrics-container {
+    background: rgba(20,0,60,0.6); padding: 20px;5; border-radius: 12px;
+    max-height: 100%; overflow-y: auto; font-size: 15px;
+    backdrop-filter: blur(8px);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .bar-left { position: absolute; width: 70px; z-index: 20; }
+    .bar-left.expanded { width: 240px; }
+    .upper-right { flex-direction: column; }
+    .bar-middle, .bar-right { flex: 1; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Left Sidebar -->
+  <div class="bar bar-left">
+    <button class="toggle-sidebar-button" id="toggleSidebarButton">☰ Menu</button>
+    <div class="playlist-label">Current Playlist</div>
+    <div class="current-playlist-placeholder" id="playlistButton1"></div>
+    <div class="playlist-label">Liked Songs</div>
+    <div class="liked-songs-placeholder" id="playlistButton2"></div>
+    <button class="left-login-button logged-out" id="loginButton">Login</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="right-section">
+    <div class="upper-right">
+      <div class="bar bar-middle">
+        <div style="display:flex; gap:10px; margin-bottom:20px;">
+          <input type="text" placeholder="Search..." class="middle-search-bar" id="searchInput" style="flex:1; padding:12px; border-radius:12px; border:none; background:#1A0033; color:#E6E6FA;">
+          <button class="camera-button" id="emotionButton" style="width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg,#BA55D3,#FF69B4); border:none; font-size:24px;">Smile</button>
+        </div>
+        <div class="recently-played"><h3>Recently Played</h3><div class="recent-list-horizontal" id="recentlyPlayedList"></div></div>
+        <div class="recently-played" style="margin-top:20px;"><h3>Current Playlist</h3><div class="recent-list-horizontal" id="currentPlaylist"></div></div>
+      </div>
+
+      <div class="bar bar-right">
+        <div class="emotion-indicator" id="emotionIndicator">Emotion: Detecting...</div>
+        <img src="default_album.png" class="player-thumbnail" id="playerThumbnail" style="width:300px; height:300px; border-radius:16px; align-self:center; margin:20px 0;">
+        <div class="equalizer-container" id="equalizerContainer" style="gap:6px;">
+          <div class="equalizer-bar"></div><div class="equalizer-bar"></div><div class="equalizer-bar"></div>
+          <div class="equalizer-bar"></div><div class="equalizer-bar"></div><div class="equalizer-bar"></div><div class="equalizer-bar"></div>
+        </div>
+        <div class="lyrics-container" id="lyricsContainer">Select a song to see lyrics...</div>
+      </div>
+    </div>
+
+    <!-- Bottom Player -->
+    <div class="bar bar-bottom">
+      <div class="player-controls">
+        <button id="prevBtn" disabled>Rewind</button>
+        <button id="playBtn" disabled>Play</button>
+        <button id="pauseBtn" disabled>Pause</button>
+        <button id="nextBtn" disabled>Forward</button>
+        <button id="likeBtn" class="like-button" disabled>Heart</button>
+      </div>
+      <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+        <input type="range" id="progressBar" min="0" max="100" value="0" disabled style="width:100%;">
+        <div style="display:flex; justify-content:space-between; font-size:12px;">
+          <span id="currentTime">0:00</span>
+          <span id="totalTime">0:00</span>
+        </div>
+      </div>
+      <div class="volume-controls" style="position:relative;">
+        <button id="volumeBtn" disabled>Speaker</button>
+        <div class="volume-slider-container" id="volumeSliderContainer">
+          <input type="range" id="volumeSlider" orient="vertical" min="0" max="100" value="70" disabled>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <audio id="audioPlayer"></audio>
+
+<script>
+  const API_BASE = 'http://localhost:5001';
+  let currentEmotion = 'neutral', currentSong = null, currentPlaylist = [], likedSongs = [], recentlyPlayed = [];
+  let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  let equalizerInterval = null;
+
+  const audio = document.getElementById('audioPlayer');
+  const playerThumbnail = document.getElementById('playerThumbnail');
+  const emotionIndicator = document.getElementById('emotionIndicator');
+  const emotionButton = document.getElementById('emotionButton');
+  const loginButton = document.getElementById('loginButton');
+  const currentPlaylistPlaceholder = document.getElementById('playlistButton1');
+  const likedSongsPlaceholder = document.getElementById('playlistButton2');
+  const equalizerBars = document.querySelectorAll('.equalizer-bar');
+
+  function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function startEqualizer() {
+    if (equalizerInterval) return;
+    equalizerInterval = setInterval(() => {
+      equalizerBars.forEach((bar, i) => {
+        bar.style.animationDelay = `${i * 50}ms`;
+        bar.classList.add('active');
+      });
+    }, 100);
+  }
+
+  function stopEqualizer() {
+    clearInterval(equalizerInterval);
+    equalizerInterval = null;
+    equalizerBars.forEach(bar => bar.classList.remove('active'));
+  }
+
+  function updateThumbnails(container, songs) {
+    container.innerHTML = '';
+    container.classList.toggle('empty', !songs.length);
+    if (!songs.length) return;
+    const count = Math.min(songs.length, 4);
+    songs.slice(0, count).forEach(song => {
+      const img = new Image();
+      img.src = song.thumbnail || 'default_album.png';
+      img.className = `count-${count}`;
+      container.appendChild(img);
+    });
+  }
+
+  async function loadCurrentPlaylist() {
+    const res = await fetch(`${API_BASE}/current-playlist`);
+    currentPlaylist = await res.json();
+    updateThumbnails(currentPlaylistPlaceholder, currentPlaylist);
+  }
+
+  async function loadLikedSongs() {
+    const res = await fetch(`${API_BASE}/liked-songs`);
+    likedSongs = await res.json();
+    updateThumbnails(likedSongsPlaceholder, likedSongs);
+  }
+
+  function loadSong(data) {
+    currentSong = data;
+    audio.src = data.url;
+    playerThumbnail.src = data.thumbnail || 'default_album.png';
+    document.getElementById('lyricsContainer').textContent = `Now playing: ${data.title} by ${data.artist || 'Unknown'}`;
+    audio.play().then(() => startEqualizer());
+  }
+
+  loginButton.onclick = () => isLoggedIn ? (localStorage.removeItem('isLoggedIn'), location.reload()) : (location.href = '13.html');
+
+  document.getElementById('playlistButton1').onclick = () => alert('Open Current Playlist (Overlay coming soon!)');
+  document.getElementById('playlistButton2').onclick = () => alert('Open Liked Songs (Overlay coming soon!)');
+
+  document.getElementById('emotionButton').onclick = () => {
+    const emotions = ['happy', 'sad', 'angry', 'calm', 'energetic'];
+    const next = emotions[(emotions.indexOf(currentEmotion) + 1) % emotions.length];
+    fetch(`${API_BASE}/update-emotion`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({emotion: next}) });
+    currentEmotion = next;
+    emotionIndicator.textContent = `Emotion: ${next}`;
+    emotionButton.textContent = {happy:'Smile', sad:'Sad', angry:'Angry', calm:'Calm', energetic:'Strong'}[next];
+  };
+
+  // Init
+  (async () => {
+    if (isLoggedIn) {
+      await loadCurrentPlaylist();
+      await loadLikedSongs();
+      const res = await fetch(`${API_BASE}/play-song`);
+      if (res.ok) loadSong(await res.json());
+    }
+  })();
+
+  // Audio events
+  audio.addEventListener('timeupdate', () => {
+    if (audio.duration) {
+      document.getElementById('progressBar').value = (audio.currentTime / audio.duration) * 100;
+      document.getElementById('currentTime').textContent = formatTime(audio.currentTime);
+      document.getElementById('totalTime').textContent = formatTime(audio.duration);
+    }
+  });
+
+  audio.addEventListener('ended', () => fetch(`${API_BASE}/play-song`).then(r => r.json()).then(loadSong));
+</script>
+</body>
+</html>
