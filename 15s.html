@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Login with Email, Password & OTP</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+  /* 🔥 FULL-PAGE BACKGROUND (your LUMIERE image) */
+  body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    /* background image behind everything */
+    background: url('lumiere.png') no-repeat center center/cover;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 🔥 DARK OVERLAY + slight blur so login box looks clean */
+  body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35); 
+    backdrop-filter: blur(3px);
+    z-index: 0;
+  }
+
+  /* 🔥 WATERMARK behind login box (centered, faint) */
+  body::after {
+    content: "";
+    position: absolute;
+    width: 500px;  
+    height: 500px;
+
+    background: url('lumiere.png') no-repeat center;
+    background-size: contain;
+
+    opacity: 0.10;          /* transparency */
+    filter: blur(1px);       /* soft, elegant */
+
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    z-index: 0;
+  }
+
+  /* --- YOUR ORIGINAL DESIGN --- */
+
+  .bg-shape {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.25;
+    animation: float 12s infinite ease-in-out;
+    z-index: 1;
+  }
+  .shape1 { width: 180px; height: 180px; background: #a7c7e7; top: -60px; left: -60px; }
+  .shape2 { width: 250px; height: 250px; background: #fdd6e0; bottom: -80px; right: -80px; }
+  @keyframes float {
+    0%,100% { transform: translateY(0) translateX(0); }
+    50% { transform: translateY(-15px) translateX(15px); }
+  }
+
+  .container {
+    position: relative;
+    background-color: rgba(255,255,255,0.92);
+    padding: 40px 30px;
+    border-radius: 25px;
+    width: 360px;
+    text-align: center;
+    color: #333;
+    box-shadow: 0 10px 35px rgba(0,0,0,0.2);
+    transition: transform 0.3s ease;
+    z-index: 2; /* VERY IMPORTANT → put above watermark */
+  }
+
+  .container:hover { transform: translateY(-5px); }
+
+  h2 { 
+    margin-bottom: 25px; 
+    font-weight: 600; 
+    color: #2a2a2a;
+  }
+
+  .step-indicator {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .step {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #ccc;
+    margin: 0 5px;
+    transition: 0.3s ease;
+  }
+  .step.active {
+    background-color: #66a6ff;
+    width: 20px;
+    border-radius: 10px;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    margin: 10px 0;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: 0.6s ease;
+  }
+  .input-group.show {
+    max-height: 120px;
+    opacity: 1;
+  }
+
+  input {
+    padding: 14px 20px;
+    margin-bottom: 14px;
+    border: 2px solid #ddd;
+    border-radius: 50px;
+    font-size: 16px;
+    outline: none;
+    background-color: rgba(255,255,255,0.9);
+    transition: 0.3s ease;
+  }
+  input:focus { border-color: #66a6ff; }
+
+  #forgotBtn {
+    background: none;
+    border: none;
+    color: #66a6ff;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: -8px;
+    margin-bottom: 6px;
+  }
+
+  #loginBtn {
+    padding: 14px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(45deg,#89f7fe,#66a6ff);
+    color: #fff;
+    font-size: 16px;
+    width: 100%;
+    cursor: pointer;
+  }
+
+  #registerBtn {
+    margin-top: 15px;
+    padding: 14px;
+    border-radius: 50px;
+    background: linear-gradient(45deg,#fbc2eb,#a6c1ee);
+    width: 100%;
+    border: none;
+    cursor: pointer;
+  }
+
+  .otp-group button {
+    padding: 12px;
+    border-radius: 50px;
+    border: none;
+    background: #89f7fe;
+    color: #fff;
+    margin-top: 5px;
+    cursor: pointer;
+  }
+
+  .popup {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    padding: 15px 25px;
+    background: #00c3ff;
+    color: white;
+    font-weight: bold;
+    border-radius: 50px;
+    opacity: 0;
+    transition: 0.4s ease;
+    z-index: 3;
+  }
+  .popup.show { transform: translateX(-50%) scale(1); opacity: 1; }
+  .popup.fail { background: #ff6b6b; }
+</style>
+</head>
+<body>
+
+<div class="bg-shape shape1"></div>
+<div class="bg-shape shape2"></div>
+
+<div class="container">
+  <h2>Login</h2>
+
+  <div class="step-indicator">
+    <div class="step active"></div>
+    <div class="step"></div>
+    <div class="step"></div>
+  </div>
+
+  <div class="input-group show" id="emailGroup">
+    <input type="email" id="email" placeholder="Enter your email">
+  </div>
+
+  <div class="input-group" id="passwordGroup">
+    <input type="password" id="password" placeholder="Enter your password">
+    <button id="forgotBtn" onclick="forgotPassword()">Forgot Password?</button>
+  </div>
+
+  <button id="loginBtn" onclick="sendOtp()">
+    <span class="btn-text">Login</span>
+  </button>
+
+  <div class="input-group otp-group" id="otpGroup">
+    <input type="text" id="otp" placeholder="Enter OTP" maxlength="6">
+    <button onclick="verifyOtp()">Verify OTP</button>
+  </div>
+
+  <button id="registerBtn" onclick="goToRegister()">Register</button>
+</div>
+
+<div id="popup" class="popup"></div>
+
+<script>
+/* --- Your existing JavaScript stays unchanged --- */
+</script>
+
+</body>
+</html>
