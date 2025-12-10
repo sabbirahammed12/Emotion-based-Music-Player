@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+body {
+  font-family: 'Poppins', sans-serif;
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #cfd9df, #e2ebf0);
+  overflow: hidden;
+}
+
+/* Floating background shapes */
+.bg-shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.25;
+  animation: float 14s infinite ease-in-out;
+  filter: blur(5px);
+}
+.shape1 { width: 180px; height: 180px; background: #91b9e6; top: -60px; left: -60px; }
+.shape2 { width: 250px; height: 250px; background: #f3b7c8; bottom: -80px; right: -80px; }
+
+@keyframes float {
+  0%,100% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-20px) translateX(20px); }
+}
+
+/* Main Card */
+.container {
+  position: relative;
+  background: rgba(255,255,255,0.97);
+  padding: 42px 32px;
+  border-radius: 28px;
+  width: 360px;
+  text-align: center;
+  color: #333;
+  box-shadow: 0 20px 45px rgba(0,0,0,0.15);
+  backdrop-filter: blur(10px);
+  transition: all 0.35s ease;
+}
+.container:hover { 
+  transform: translateY(-6px);
+  box-shadow: 0 28px 55px rgba(0,0,0,0.18);
+}
+
+/* Logo */
+.logo {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 15px;
+  display: block;
+}
+
+/* Title */
+h2 {
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #2a2a2a;
+  margin-bottom: 26px;
+}
+
+/* Step Indicator */
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+.step {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #ccc;
+  margin: 0 6px;
+  transition: all 0.35s ease;
+}
+.step.active {
+  background: linear-gradient(45deg,#66a6ff,#89f7fe);
+  width: 22px;
+  border-radius: 12px;
+}
+
+/* Input Groups */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  margin: 12px 0;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: all 0.6s ease;
+}
+.input-group.show {
+  max-height: 120px;
+  opacity: 1;
+}
+
+input {
+  padding: 15px 22px;
+  margin-bottom: 14px;
+  border: 2px solid #e3e3e3;
+  border-radius: 50px;
+  font-size: 15.5px;
+  outline: none;
+  background-color: #fafafa;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+input:focus { 
+  border-color: #66a6ff;
+  box-shadow: 0 0 10px rgba(102, 166, 255, 0.45);
+  background: #fff;
+}
+
+/* Button */
+#registerBtn {
+  margin-top: 16px;
+  background: linear-gradient(45deg,#fbc2eb,#a6c1ee);
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+  border-radius: 50px;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 8px 18px rgba(175, 137, 231, 0.35);
+  transition: all 0.3s ease;
+}
+
+#registerBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 25px rgba(175, 137, 231, 0.45);
+}
+
+/* Popup */
+.popup {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) scale(0);
+  padding: 16px 26px;
+  background: linear-gradient(45deg,#00c3ff,#66a6ff);
+  color: white;
+  font-weight: bold;
+  border-radius: 50px;
+  opacity: 0;
+  transition: all 0.4s ease;
+  z-index: 10;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+}
+.popup.show { transform: translateX(-50%) scale(1); opacity: 1; }
+.popup.fail { background: linear-gradient(45deg,#ff6b6b,#ff3b3b); }
+</style>
+</head>
+
+<body>
+
+<div class="bg-shape shape1"></div>
+<div class="bg-shape shape2"></div>
+
+<div class="container">
+  <!-- Logo next to title -->
+  <h2 style="display:flex; align-items:center; justify-content:center; gap:10px;">
+    <img src="lumiere.png" alt="App Logo" style="width:65px; height:65px;">
+    Register
+  </h2>
+  
+  <div class="step-indicator">
+    <div class="step active"></div>
+    <div class="step"></div>
+    <div class="step"></div>
+  </div>
+
+  <div class="input-group show" id="emailGroup">
+    <input type="email" id="email" placeholder="Enter your email">
+  </div>
+
+  <div class="input-group" id="passwordGroup">
+    <input type="password" id="password" placeholder="Enter your password">
+  </div>
+
+  <div class="input-group" id="rePasswordGroup">
+    <input type="password" id="rePassword" placeholder="Re-enter your password">
+  </div>
+
+  <button id="registerBtn" onclick="registerUser()">Register</button>
+</div>
+
+
+<div id="popup" class="popup"></div>
+
+<script>
+let currentStep = 1;
+
+function updateStepIndicator() {
+  const steps = document.querySelectorAll('.step');
+  steps.forEach((step, index) => {
+    if (index < currentStep) step.classList.add('active');
+    else step.classList.remove('active');
+  });
+}
+
+function showPopup(message, success=true){
+  const popup = document.getElementById('popup');
+  popup.innerText = message;
+  popup.className = 'popup show' + (success ? '' : ' fail');
+  setTimeout(()=>{popup.className='popup';},2000);
+}
+
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+
+emailInput.addEventListener('input', () => {
+  if(emailInput.value.trim().length > 3){
+    document.getElementById('passwordGroup').classList.add('show');
+    currentStep = 2;
+  } else {
+    document.getElementById('passwordGroup').classList.remove('show');
+    currentStep = 1;
+  }
+  updateStepIndicator();
+});
+
+passwordInput.addEventListener('input', () => {
+  if(passwordInput.value.trim().length > 3){
+    document.getElementById('rePasswordGroup').classList.add('show');
+    currentStep = 3;
+  } else {
+    document.getElementById('rePasswordGroup').classList.remove('show');
+    currentStep = 2;
+  }
+  updateStepIndicator();
+});
+
+async function registerUser(){
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
+  const rePassword = document.getElementById('rePassword').value.trim();
+
+  if(!email){ showPopup("Enter your email", false); return; }
+  if(!password){ showPopup("Enter your password", false); return; }
+  if(password !== rePassword){ showPopup("Passwords do not match", false); return; }
+
+  try{
+    const res = await fetch('http://localhost:5000/register', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, password, re_password: rePassword})
+    });
+    const data = await res.json();
+    if(res.ok){
+      showPopup("Registered successfully!");
+      setTimeout(()=>{ window.location.href='15.html'; },1200);
+    } else {
+      showPopup(data.error, false);
+    }
+  } catch(err){
+    showPopup("Error registering user", false);
+  }
+}
+
+updateStepIndicator();
+</script>
+
+</body>
+</html>
